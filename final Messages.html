@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Messages - Seekooh</title>
+
+  <!-- ========================================
+       BOOTSTRAP 5 CSS - CDN
+       ======================================== -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- ========================================
+       END BOOTSTRAP 5 CSS
+       ======================================== -->
+
+  <style>
+    /* =========================================
+       CUSTOM CSS STYLES START
+       ========================================= */
+    
+    /* -------------------------
+       CSS Variables / Theme Colors
+       ------------------------- */
+    :root{
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --muted: #6c757d;
+      --primary: #2563eb; /* blue */
+      --primary-foreground: #fff;
+      --chat-bubble: #f1f3f5;
+      --online: #34d399;
+      --danger: #ef4444;
+      --sidebar: #0f172a;
+      --sidebar-fg: #f8fafc;
+    }
+
+    /* -------------------------
+       Body & Global Styles
+       ------------------------- */
+    body {
+      background: var(--bg);
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* -------------------------
+       Sidebar Styling
+       ------------------------- */
+    #app-sidebar {
+      background: linear-gradient(180deg, var(--sidebar), #071024);
+      color: var(--sidebar-fg);
+      min-height: 100vh;
+      padding: 1rem;
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 250px;
+      z-index: 1000;
+      transition: transform 0.3s ease;
+    }
+    
+    /* Mobile sidebar hidden by default */
+    @media (max-width: 767px) {
+      #app-sidebar {
+        transform: translateX(-100%);
+      }
+      #app-sidebar.show {
+        transform: translateX(0);
+      }
+    }
+    
+    #app-sidebar .logo {
+      display:flex;
+      gap:.75rem;
+      align-items:center;
+      margin-bottom:2rem;
+    }
+    #app-sidebar .logo .brand {
+      width:38px;
+      height:38px;
+      background: #0ea5a4;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:8px;
+      font-weight:700;
+      color:white;
+    }
+    
+    /* Navigation Items */
+    .nav-item-custom {
+      color: rgba(255,255,255,0.8);
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .nav-item-custom:hover {
+      color: var(--primary-foreground);
+      background: rgba(255,255,255,0.04);
+    }
+    .nav-item-custom.active {
+      background: rgba(255,255,255,0.06);
+      border-radius:8px;
+      color:var(--primary-foreground);
+    }
+
+    /* -------------------------
+       Main Content Area
+       ------------------------- */
+    #main-content {
+      margin-left: 250px;
+      transition: margin-left 0.3s ease;
+    }
+    
+    @media (max-width: 767px) {
+      #main-content {
+        margin-left: 0;
+      }
+    }
+
+    /* -------------------------
+       Conversations List & Chat
+       ------------------------- */
+    .conversation-item { 
+      cursor:pointer; 
+      border-bottom:1px solid #eceef2;
+      padding: 0.75rem;
+      transition: background 0.2s;
+    }
+    .conversation-item:hover { background: rgba(0,0,0,0.02); }
+    
+    .avatar-circle {
+      width:44px;
+      height:44px;
+      border-radius:50%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#0ea5a4;
+      color:white;
+      font-weight:700;
+      flex-shrink: 0;
+    }
+    
+    .badge-unread {
+      background: var(--primary);
+      color: var(--primary-foreground);
+      border-radius:12px;
+      padding:2px 7px;
+      font-size:12px;
+    }
+
+    /* -------------------------
+       Chat Bubbles
+       ------------------------- */
+    .chat-bubble {
+      border-radius:16px;
+      padding:10px 14px;
+      max-width:70%;
+      display:inline-block;
+      word-wrap: break-word;
+      position: relative;
+    }
+    .chat-sent { 
+      background: var(--primary); 
+      color:var(--primary-foreground);
+      margin-left: auto;
+    }
+    .chat-received { 
+      background: var(--chat-bubble); 
+      color: #0f172a;
+    }
+
+    /* -------------------------
+       Message Status Ticks (Sent/Delivered/Read)
+       ------------------------- */
+    .message-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 1px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    
+    .message-status svg {
+      width: 16px;
+      height: 16px;
+    }
+    
+    /* Single tick - Sent */
+    .message-status.sent svg {
+      stroke: rgba(255, 255, 255, 0.7);
+    }
+    
+    /* Double tick - Delivered */
+    .message-status.delivered svg {
+      stroke: rgba(255, 255, 255, 0.9);
+    }
+    
+    /* Double tick - Read (blue) */
+    .message-status.read svg {
+      stroke: #34d399;
+    }
+
+    /* -------------------------
+       Helper Classes
+       ------------------------- */
+    .text-muted-sm { color: var(--muted); font-size: .9rem; }
+    .dot-online { 
+      width:10px;
+      height:10px;
+      border-radius:50%; 
+      background:var(--online); 
+      display:inline-block; 
+      margin-right:.4rem; 
+    }
+
+    /* -------------------------
+       Scrollable Areas
+       ------------------------- */
+    .list-scroll { 
+      max-height: calc(100vh - 200px); 
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    .chat-scroll { 
+      max-height: calc(100vh - 260px); 
+      overflow-y: auto;
+      padding:1rem;
+      flex-grow: 1;
+    }
+
+    /* -------------------------
+       Toast Notifications
+       ------------------------- */
+    .toast-container-top { 
+      position: fixed; 
+      top: 1rem; 
+      right: 1rem; 
+      z-index: 1080; 
+    }
+    
+    /* -------------------------
+       Mobile Overlay
+       ------------------------- */
+    #sidebar-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+    }
+    
+    @media (max-width: 767px) {
+      #sidebar-overlay.show {
+        display: block;
+      }
+    }
+    
+    /* -------------------------
+       Responsive Adjustments
+       ------------------------- */
+    @media (max-width: 991px) {
+      .chat-bubble {
+        max-width: 85%;
+      }
+    }
+    
+    @media (max-width: 767px) {
+      #app-sidebar {
+        width: 280px;
+      }
+      
+      .chat-bubble {
+        max-width: 90%;
+      }
+      
+      .list-scroll {
+        max-height: calc(100vh - 180px);
+      }
+      
+      .chat-scroll {
+        max-height: calc(100vh - 240px);
+      }
+    }
+    
+    /* -------------------------
+       Card Styling
+       ------------------------- */
+    .card {
+      border: 1px solid #e6e9ee;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    /* =========================================
+       CUSTOM CSS STYLES END
+       ========================================= */
+  </style>
+</head>
+<body>
+
+<!-- Sidebar overlay for mobile -->
+<div id="sidebar-overlay"></div>
+
+<!-- ========================================
+     BOOTSTRAP TOAST CONTAINER
+     ======================================== -->
+<div class="toast-container toast-container-top" id="toastContainer"></div>
+<!-- ========================================
+     END BOOTSTRAP TOAST CONTAINER
+     ======================================== -->
+
+<!-- ========================================
+     SIDEBAR NAVIGATION
+     BACKEND: Replace static content with dynamic user data
+     ======================================== -->
+<nav id="app-sidebar" class="d-flex flex-column">
+  <!-- Mobile close button -->
+  <div class="d-flex d-md-none justify-content-end mb-2">
+    <button class="btn btn-sm btn-outline-light" id="mobileCloseBtn">Close</button>
+  </div>
+
+  <!-- Logo -->
+  <!-- BACKEND: Fetch company/platform branding from database -->
+  <div class="logo">
+    <div class="brand">S</div>
+    <div>
+      <div style="font-weight:700; font-size: 1rem;">seekooh</div>
+      <div style="font-size:.85rem; color:rgba(255,255,255,0.7)">Teacher platform</div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <!-- BACKEND: Generate navigation items based on user permissions/role -->
+  <div class="nav flex-column">
+    <a href="#" class="nav-link nav-item-custom d-flex align-items-center mb-2 p-2 active" data-target="messagesView">
+      <svg style="width:18px;height:18px; margin-right:.6rem" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Messages
+      <!-- BACKEND: Fetch unread message count from database -->
+      <span class="ms-auto badge-unread" id="sidebarBadge">4</span>
+    </a>
+  </div>
+
+  <!-- Spacer -->
+  <div class="flex-grow-1"></div>
+</nav>
+<!-- ========================================
+     END SIDEBAR NAVIGATION
+     ======================================== -->
+
+<!-- ========================================
+     MAIN CONTENT AREA
+     ======================================== -->
+<main id="main-content" class="p-3" style="min-height:100vh;">
+  <!-- Top (mobile toggle + title) -->
+  <div class="d-flex align-items-center mb-3">
+    <button class="btn btn-outline-secondary d-md-none me-2" id="mobileOpenBtn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
+    <h3 id="pageTitle" class="m-0">Messages</h3>
+  </div>
+
+  <!-- Views container -->
+  <div id="viewsContainer">
+    <!-- Messages View -->
+    <section id="messagesView">
+      <div class="row g-3">
+        
+        <!-- ========================================
+             CONVERSATIONS LIST (LEFT PANEL)
+             BACKEND: Fetch conversations from database via API
+             API Endpoint: GET /api/conversations
+             Response: [{id, name, role, avatar, lastMsg, time, unread, online}, ...]
+             ======================================== -->
+        <aside class="col-12 col-lg-4">
+          <div class="card">
+            <div class="card-body">
+              <!-- Search -->
+              <!-- BACKEND: Implement server-side search for users/conversations -->
+              <!-- API Endpoint: GET /api/conversations/search?q={query} -->
+              <div class="mb-3 position-relative">
+                <input class="form-control ps-4" id="searchPeople" placeholder="Find and invite people">
+                <span style="position:absolute;left:10px;top:9px;color:#9aa2b2;">🔍</span>
+              </div>
+
+              <!-- Conversations -->
+              <!-- BACKEND: This container will be populated with user conversations -->
+              <!-- Each conversation should include: user info, last message, timestamp, unread count -->
+              <div id="conversationsList" class="list-scroll">
+                <!-- BACKEND: Dynamically inject conversation items here -->
+                <!-- Example structure for each conversation:
+                <div class="conversation-item" data-id="{conversationId}">
+                  <div class="d-flex gap-3 align-items-start">
+                    <div class="avatar-circle">{userInitials}</div>
+                    <div class="flex-grow-1 overflow-hidden">
+                      <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div class="fw-bold text-truncate">{userName}</div>
+                        <small class="text-muted flex-shrink-0 ms-2">{timestamp}</small>
+                      </div>
+                      <div class="text-muted-sm text-truncate">{lastMessage}</div>
+                    </div>
+                    {unreadBadge}
+                  </div>
+                </div>
+                -->
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- ========================================
+             CHAT AREA (MAIN PANEL)
+             BACKEND: Load messages for selected conversation
+             API Endpoint: GET /api/conversations/{conversationId}/messages
+             Response: [{id, text, senderId, receiverId, timestamp, status}, ...]
+             ======================================== -->
+        <section class="col-12 col-lg-8">
+          <div class="card h-100 d-flex flex-column">
+            
+            <!-- Chat header -->
+            <!-- BACKEND: Display selected conversation user details -->
+            <div class="card-header d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
+                <button class="btn btn-light btn-sm d-lg-none" id="backToListBtn">←</button>
+                <!-- BACKEND: Populate with selected user's avatar -->
+                <div class="avatar-circle" id="chatAvatar">JS</div>
+                <div class="overflow-hidden">
+                  <!-- BACKEND: Populate with selected user's name -->
+                  <div id="chatName" style="font-weight:700;" class="text-truncate">Jimmy Seinz</div>
+                  <!-- BACKEND: Show user role and online status from database -->
+                  <div class="text-muted-sm text-truncate" id="chatStatus">Teacher • <span class="text-success">Active Now</span></div>
+                </div>
+              </div>
+
+              <div class="d-flex gap-2 flex-shrink-0">
+                <div class="btn-group">
+                  <button class="btn btn-sm btn-outline-secondary" id="moreBtn">•••</button>
+                  <button class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown"></button>
+                  <!-- BACKEND: Implement these actions with API calls -->
+                  <ul class="dropdown-menu dropdown-menu-end">
+                    <!-- API: POST /api/users/{userId}/block -->
+                    <li><a class="dropdown-item" href="#" id="actionBlock">Block User</a></li>
+                    <!-- API: POST /api/users/{userId}/report -->
+                    <li><a class="dropdown-item" href="#" id="actionReport">Report User</a></li>
+                    <!-- API: DELETE /api/conversations/{conversationId} -->
+                    <li><a class="dropdown-item text-danger" href="#" id="actionDelete">Delete Conversation</a></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <!-- Messages -->
+            <!-- BACKEND: Display messages for current conversation -->
+            <!-- Each message should show: text, timestamp, sender, and status (sent/delivered/read) -->
+            <div class="card-body chat-scroll" id="chatMessages">
+              <!-- BACKEND: Dynamically inject messages here -->
+              <!-- Example structure for sent message:
+              <div class="mb-3 d-flex justify-content-end">
+                <div>
+                  <div class="chat-bubble chat-sent">
+                    {messageText}
+                    <span class="message-status {status-class}">
+                      {statusIcon}
+                    </span>
+                  </div>
+                  <small class="text-muted d-block mt-1 text-end">{timestamp}</small>
+                </div>
+              </div>
+              -->
+              <!-- Example structure for received message:
+              <div class="mb-3 d-flex justify-content-start">
+                <div>
+                  <div class="chat-bubble chat-received">
+                    {messageText}
+                  </div>
+                  <small class="text-muted d-block mt-1 text-start">{timestamp}</small>
+                </div>
+              </div>
+              -->
+            </div>
+
+            <!-- Input -->
+            <!-- BACKEND: Send message via WebSocket or API -->
+            <!-- API Endpoint: POST /api/messages -->
+            <!-- Payload: {conversationId, text, timestamp} -->
+            <!-- WebSocket: Emit 'send_message' event for real-time delivery -->
+            <div class="card-footer">
+              <div class="d-flex gap-2 align-items-center">
+                <!-- BACKEND: Implement file attachment upload -->
+                <!-- API: POST /api/messages/attachments -->
+                <button class="btn btn-sm btn-outline-secondary" id="attachBtn">📎</button>
+                <input id="messageInput" class="form-control" placeholder="Type a message..." />
+                <!-- BACKEND: On click, send message to server -->
+                <button class="btn btn-primary" id="sendBtn">Send</button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </div>
+</main>
+<!-- ========================================
+     END MAIN CONTENT AREA
+     ======================================== -->
+
+<!-- ========================================
+     BOOTSTRAP MODALS
+     ======================================== -->
+<!-- Confirmation Modal (Block / Report / Delete) -->
+<!-- BACKEND: On confirm, make appropriate API call based on action type -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmModalTitle">Confirm</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="confirmModalBody">Are you sure?</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="confirmCancelBtn">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmOkBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ========================================
+     END BOOTSTRAP MODALS
+     ======================================== -->
+
+<!-- ========================================
+     BOOTSTRAP 5 BUNDLE WITH POPPER - CDN
+     ======================================== -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- ========================================
+     END BOOTSTRAP 5 BUNDLE
+     ======================================== -->
+
+<script>
+  /*****************************************
+   * JAVASCRIPT CODE START
+   * 
+   * BACKEND INTEGRATION NOTES:
+   * ========================================
+   * This is currently using sample/mock data.
+   * Replace the following sections with real API calls:
+   * 
+   * 1. AUTHENTICATION
+   *    - Add user authentication check on page load
+   *    - API: GET /api/auth/current-user
+   * 
+   * 2. CONVERSATIONS
+   *    - Replace sampleConversations with API call
+   *    - API: GET /api/conversations
+   * 
+   * 3. MESSAGES
+   *    - Replace sampleMessages with API call
+   *    - API: GET /api/conversations/{id}/messages
+   * 
+   * 4. REAL-TIME UPDATES
+   *    - Implement WebSocket connection for real-time messaging
+   *    - Socket events: 'new_message', 'message_read', 'user_online', 'user_offline'
+   * 
+   * 5. MESSAGE STATUS
+   *    - Update message status based on server response
+   *    - Statuses: 'sent', 'delivered', 'read'
+   * 
+   * 6. SEND MESSAGE
+   *    - Replace local message push with API call
+   *    - API: POST /api/messages
+   * 
+   * 7. SEARCH
+   *    - Implement server-side search
+   *    - API: GET /api/conversations/search?q={query}
+   *****************************************/
+
+  /*****************************************
+   * DATA & STATE
+   * BACKEND: Replace with API calls
+   *****************************************/
+  const sampleConversations = [
+    { id: 1, name: "Jimmy Seinz", role: "Teacher", avatar: "JS", lastMsg: "Hey, how are you?", time: "2m ago", unread: 2, online: true },
+    { id: 2, name: "Maria Garcia", role: "Student", avatar: "MG", lastMsg: "Thanks for the help!", time: "15m ago", unread: 0, online: true },
+    { id: 3, name: "John Doe", role: "Teacher", avatar: "JD", lastMsg: "See you tomorrow", time: "1h ago", unread: 1, online: false },
+    { id: 4, name: "Sarah Smith", role: "Student", avatar: "SS", lastMsg: "Got it, thanks!", time: "3h ago", unread: 1, online: true },
+    { id: 5, name: "Mike Johnson", role: "Teacher", avatar: "MJ", lastMsg: "Let's schedule a meeting", time: "5h ago", unread: 0, online: false }
+  ];
+
+  // BACKEND: Message status can be 'sent', 'delivered', or 'read'
+  const sampleMessages = {
+    1: [
+      { id: 1, text: "Hey there! How have you been?", sent: false, time: "10:30 AM", status: null },
+      { id: 2, text: "Hi! I've been great, thanks for asking!", sent: true, time: "10:32 AM", status: "read" },
+      { id: 3, text: "That's wonderful to hear!", sent: false, time: "10:33 AM", status: null },
+      { id: 4, text: "How about you?", sent: false, time: "10:33 AM", status: null },
+      { id: 5, text: "Doing well, just working on some projects", sent: true, time: "10:35 AM", status: "delivered" }
+    ],
+    2: [
+      { id: 1, text: "Can you help me with the homework?", sent: false, time: "9:15 AM", status: null },
+      { id: 2, text: "Of course! What do you need help with?", sent: true, time: "9:20 AM", status: "read" },
+      { id: 3, text: "Thanks for the help!", sent: false, time: "9:45 AM", status: null }
+    ],
+    3: [
+      { id: 1, text: "Don't forget about the meeting tomorrow", sent: true, time: "Yesterday", status: "read" },
+      { id: 2, text: "See you tomorrow", sent: false, time: "Yesterday", status: null }
+    ],
+    4: [
+      { id: 1, text: "The assignment is due next week", sent: true, time: "2 hours ago", status: "delivered" },
+      { id: 2, text: "Got it, thanks!", sent: false, time: "2 hours ago", status: null }
+    ],
+    5: [
+      { id: 1, text: "Let's schedule a meeting", sent: false, time: "5 hours ago", status: null }
+    ]
+  };
+
+  let currentConversation = 1;
+  let allConversations = [...sampleConversations];
+
+  /*****************************************
+   * RENDER FUNCTIONS
+   *****************************************/
+  
+  /**
+   * Render conversations list
+   * BACKEND: Replace with API call to fetch conversations
+   * API: GET /api/conversations
+   */
+  function renderConversations(conversations = allConversations) {
+    const container = document.getElementById('conversationsList');
+    if (!container) return;
+    
+    container.innerHTML = conversations.map(c => `
+      <div class="conversation-item" data-id="${c.id}">
+        <div class="d-flex gap-3 align-items-start">
+          <div class="avatar-circle">${c.avatar}</div>
+          <div class="flex-grow-1 overflow-hidden">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+              <div class="fw-bold text-truncate">${c.name}</div>
+              <small class="text-muted flex-shrink-0 ms-2">${c.time}</small>
+            </div>
+            <div class="text-muted-sm text-truncate">${c.lastMsg}</div>
+          </div>
+          ${c.unread > 0 ? `<span class="badge-unread">${c.unread}</span>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+    // Attach click handlers
+    container.querySelectorAll('.conversation-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const id = parseInt(item.dataset.id);
+        selectConversation(id);
+      });
+    });
+  }
+
+  /**
+   * Select and display a conversation
+   * BACKEND: Fetch conversation details and messages
+   * API: GET /api/conversations/{id}
+   * API: GET /api/conversations/{id}/messages
+   */
+  function selectConversation(id) {
+    currentConversation = id;
+    const conv = allConversations.find(c => c.id === id);
+    if (!conv) return;
+
+    // Update chat header
+    document.getElementById('chatAvatar').textContent = conv.avatar;
+    document.getElementById('chatName').textContent = conv.name;
+    document.getElementById('chatStatus').innerHTML = `${conv.role} • <span class="text-${conv.online ? 'success' : 'muted'}">${conv.online ? 'Active Now' : 'Offline'}</span>`;
+
+    // Render messages
+    renderMessages(id);
+
+    // Mark as read
+    // BACKEND: Send API call to mark conversation as read
+    // API: PUT /api/conversations/{id}/mark-read
+    conv.unread = 0;
+    renderConversations();
+    updateSidebarBadge();
+    
+    // On mobile, show chat area
+    if (window.innerWidth < 992) {
+      document.querySelector('.col-12.col-lg-4').classList.add('d-none');
+      document.querySelector('.col-12.col-lg-8').classList.remove('d-none');
+    }
+  }
+
+  /**
+   * Get message status icon (tick marks)
+   * Returns SVG HTML for sent/delivered/read status
+   */
+  function getStatusIcon(status) {
+    if (!status) return '';
+    
+    // Single tick for 'sent'
+    const singleTick = `
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M4 8l2.5 2.5L12 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    `;
+    
+    // Double tick for 'delivered' and 'read'
+    const doubleTick = `
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M2 8l2.5 2.5L10 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M6 8l2.5 2.5L14 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    `;
+    
+    if (status === 'sent') {
+      return `<span class="message-status sent">${singleTick}</span>`;
+    } else if (status === 'delivered') {
+      return `<span class="message-status delivered">${doubleTick}</span>`;
+    } else if (status === 'read') {
+      return `<span class="message-status read">${doubleTick}</span>`;
+    }
+    
+    return '';
+  }
+
+  /**
+   * Render messages for a conversation
+   * BACKEND: Replace with API call to fetch messages
+   * API: GET /api/conversations/{convId}/messages
+   * 
+   * REAL-TIME: Listen for WebSocket events
+   * - 'new_message': Add new message to UI
+   * - 'message_status_update': Update message status (sent -> delivered -> read)
+   */
+  function renderMessages(convId) {
+    const container = document.getElementById('chatMessages');
+    if (!container) return;
+    
+    const messages = sampleMessages[convId] || [];
+    container.innerHTML = messages.map(m => `
+      <div class="mb-3 d-flex ${m.sent ? 'justify-content-end' : 'justify-content-start'}">
+        <div>
+          <div class="chat-bubble ${m.sent ? 'chat-sent' : 'chat-received'}">
+            ${m.text}
+            ${m.sent ? getStatusIcon(m.status) : ''}
+          </div>
+          <small class="text-muted d-block mt-1 ${m.sent ? 'text-end' : 'text-start'}">${m.time}</small>
+        </div>
+      </div>
+    `).join('');
+    
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+  }
+
+  /**
+   * Update sidebar unread badge
+   * BACKEND: Fetch total unread count from server
+   * API: GET /api/conversations/unread-count
+   */
+  function updateSidebarBadge() {
+    const total = allConversations.reduce((sum, c) => sum + c.unread, 0);
+    const badge = document.getElementById('sidebarBadge');
+    if (badge) {
+      badge.textContent = total;
+      badge.style.display = total > 0 ? 'inline-block' : 'none';
+    }
+  }
+
+  /*****************************************
+   * EVENT HANDLERS
+   *****************************************/
+  
+  /**
+   * Send message
+   * BACKEND: Replace with API call or WebSocket emit
+   * API: POST /api/messages
+   * Payload: { conversationId, text, timestamp }
+   * 
+   * WebSocket: emit('send_message', { conversationId, text, timestamp })
+   * 
+   * Response should include:
+   * - messageId
+   * - status: 'sent' (initially)
+   * 
+   * Listen for status updates via WebSocket:
+   * - on('message_delivered', {messageId}) -> update status to 'delivered'
+   * - on('message_read', {messageId}) -> update status to 'read'
+   */
+  document.getElementById('sendBtn')?.addEventListener('click', sendMessage);
+  document.getElementById('messageInput')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+
+  function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const text = input?.value.trim();
+    if (!text) return;
+
+    // BACKEND: Replace this with actual API call
+    const newMsg = {
+      id: Date.now(),
+      text: text,
+      sent: true,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: 'sent' // Initial status, will update to 'delivered' then 'read'
+    };
+
+    if (!sampleMessages[currentConversation]) {
+      sampleMessages[currentConversation] = [];
+    }
+    sampleMessages[currentConversation].push(newMsg);
+    
+    renderMessages(currentConversation);
+    input.value = '';
+
+    // Update conversation list
+    const conv = allConversations.find(c => c.id === currentConversation);
+    if (conv) {
+      conv.lastMsg = text;
+      conv.time = 'Just now';
+      renderConversations();
+    }
+
+    // BACKEND: Simulate status updates (replace with real WebSocket events)
+    // After server confirms receipt, update to 'delivered'
+    setTimeout(() => {
+      newMsg.status = 'delivered';
+      renderMessages(currentConversation);
+    }, 1000);
+
+    // After recipient reads the message, update to 'read'
+    // BACKEND: This should come from WebSocket event when recipient opens the conversation
+    setTimeout(() => {
+      newMsg.status = 'read';
+      renderMessages(currentConversation);
+    }, 3000);
+  }
+
+  /**
+   * Search functionality
+   * BACKEND: Implement server-side search
+   * API: GET /api/conversations/search?q={query}
+   */
+  document.getElementById('searchPeople')?.addEventListener('input', (e) => {
+    const query = e.target.value.toLowerCase();
+    
+    // BACKEND: Replace this with API call for server-side search
+    const filtered = allConversations.filter(c => 
+      c.name.toLowerCase().includes(query) || 
+      c.lastMsg.toLowerCase().includes(query)
+    );
+    renderConversations(filtered);
+  });
+
+  /*****************************************
+   * MOBILE MENU TOGGLE
+   *****************************************/
+  const sidebar = document.getElementById('app-sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const mobileOpenBtn = document.getElementById('mobileOpenBtn');
+  const mobileCloseBtn = document.getElementById('mobileCloseBtn');
+
+  mobileOpenBtn?.addEventListener('click', () => {
+    sidebar?.classList.add('show');
+    overlay?.classList.add('show');
+  });
+
+  mobileCloseBtn?.addEventListener('click', () => {
+    sidebar?.classList.remove('show');
+    overlay?.classList.remove('show');
+  });
+
+  overlay?.addEventListener('click', () => {
+    sidebar?.classList.remove('show');
+    overlay?.classList.remove('show');
+  });
+
+  // Back to list on mobile
+  document.getElementById('backToListBtn')?.addEventListener('click', () => {
+    document.querySelector('.col-12.col-lg-4')?.classList.remove('d-none');
+    document.querySelector('.col-12.col-lg-8')?.classList.add('d-none');
+  });
+
+  /*****************************************
+   * ACTION BUTTONS (Block, Report, Delete)
+   * BACKEND: Implement these actions with API calls
+   *****************************************/
+  const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+  let pendingAction = null;
+
+  function setupActionButton(btnId, title, message, action) {
+    document.getElementById(btnId)?.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.getElementById('confirmModalTitle').textContent = title;
+      document.getElementById('confirmModalBody').textContent = message;
+      pendingAction = action;
+      confirmModal.show();
+    });
+  }
+
+  setupActionButton('actionBlock', 'Block User', 'Are you sure you want to block this user?', 'block');
+  setupActionButton('actionReport', 'Report User', 'Are you sure you want to report this user?', 'report');
+  setupActionButton('actionDelete', 'Delete Conversation', 'Are you sure you want to delete this conversation? This action cannot be undone.', 'delete');
+
+  /**
+   * Confirm action
+   * BACKEND: Make appropriate API call based on action type
+   * - Block: POST /api/users/{userId}/block
+   * - Report: POST /api/users/{userId}/report
+   * - Delete: DELETE /api/conversations/{conversationId}
+   */
+  document.getElementById('confirmOkBtn')?.addEventListener('click', () => {
+    if (pendingAction === 'delete') {
+      // BACKEND: API call to delete conversation
+      allConversations = allConversations.filter(c => c.id !== currentConversation);
+      renderConversations();
+      if (allConversations.length > 0) {
+        selectConversation(allConversations[0].id);
+      }
+      showToast('Conversation deleted');
+    } else if (pendingAction === 'block') {
+      // BACKEND: API call to block user
+      showToast('User blocked');
+    } else if (pendingAction === 'report') {
+      // BACKEND: API call to report user
+      showToast('User reported');
+    }
+    confirmModal.hide();
+    pendingAction = null;
+  });
+
+  /**
+   * Toast notification helper
+   */
+  function showToast(message) {
+    const toastContainer = document.getElementById('toastContainer');
+    const toastId = 'toast-' + Date.now();
+    const toastHTML = `
+      <div class="toast" id="${toastId}" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+          <strong class="me-auto">Seekooh</strong>
+          <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">${message}</div>
+      </div>
+    `;
+    toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
+  }
+
+  /*****************************************
+   * INITIALIZE APPLICATION
+   * 
+   * BACKEND: Add initialization code here
+   * 1. Check user authentication
+   * 2. Fetch user profile
+   * 3. Load conversations
+   * 4. Establish WebSocket connection
+   * 5. Set up real-time event listeners
+   *****************************************/
+  document.addEventListener('DOMContentLoaded', () => {
+    // BACKEND: Add authentication check
+    // API: GET /api/auth/current-user
+    
+    // BACKEND: Initialize WebSocket connection
+    // const socket = io('ws://your-server.com');
+    // socket.on('connect', () => console.log('Connected'));
+    // socket.on('new_message', handleNewMessage);
+    // socket.on('message_status_update', handleStatusUpdate);
+    // socket.on('user_online', handleUserOnline);
+    // socket.on('user_offline', handleUserOffline);
+    
+    renderConversations();
+    selectConversation(1);
+    updateSidebarBadge();
+  });
+
+  /*****************************************
+   * JAVASCRIPT CODE END
+   *****************************************/
+</script>
+
+</body>
+</html>
